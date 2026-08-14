@@ -1,0 +1,25 @@
+name: Agente de Pedidos
+
+on:
+  schedule:
+    - cron: '0 14 * * *'   # 09:00 en Perú
+    - cron: '0 19 * * *'   # 14:00 en Perú
+    - cron: '0 23 * * *'   # 18:00 en Perú
+  workflow_dispatch:
+
+jobs:
+  correr-agente:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install anthropic requests
+      - name: Correr el agente
+        run: python agente_pedidos.py
+        env:
+          HUBSPOT_TOKEN: ${{ secrets.HUBSPOT_TOKEN }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          CALLMEBOT_PHONE: ${{ secrets.CALLMEBOT_PHONE }}
+          CALLMEBOT_APIKEY: ${{ secrets.CALLMEBOT_APIKEY }}
