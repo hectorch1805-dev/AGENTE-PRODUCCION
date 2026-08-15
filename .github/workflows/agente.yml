@@ -5,6 +5,9 @@ on:
     - cron: '0 15 * * *'   # 10:00 en Perú (1 vez al día)
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   correr-agente:
     runs-on: ubuntu-latest
@@ -21,3 +24,10 @@ jobs:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           CALLMEBOT_PHONE: ${{ secrets.CALLMEBOT_PHONE }}
           CALLMEBOT_APIKEY: ${{ secrets.CALLMEBOT_APIKEY }}
+      - name: Publicar el dashboard
+        run: |
+          git config user.name "Agente de Pedidos"
+          git config user.email "agente@localhost"
+          git add docs/index.html
+          git diff --staged --quiet || git commit -m "Actualizar dashboard $(date)"
+          git push
