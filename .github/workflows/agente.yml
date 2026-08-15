@@ -2,9 +2,7 @@ name: Agente de Pedidos
 
 on:
   schedule:
-    - cron: '0 14 * * *'   # 09:00 en Perú
-    - cron: '0 19 * * *'   # 14:00 en Perú
-    - cron: '0 23 * * *'   # 18:00 en Perú
+    - cron: '0 15 * * *'   # 10:00 en Perú (1 vez al día)
   workflow_dispatch:
 
 jobs:
