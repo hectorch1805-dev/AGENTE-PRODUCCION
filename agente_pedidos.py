@@ -13,15 +13,14 @@ headers = {"Authorization": f"Bearer {HUBSPOT_TOKEN}",
 base = "https://api.hubapi.com"
 respuesta_etapas = requests.get(f"{base}/crm/v3/properties/deals/dealstage",
                                 headers=headers)
-etapas = {op["value"]: op["label"] for op in
-          respuesta_etapas.json().get("options", [])}
+datos_etapas = respuesta_etapas.json()
+etapas = {op["value"]: op["label"] for op in datos_etapas.get("options", [])}
 if not etapas:
-    # Si esto pasa, casi siempre falta el permiso crm.schemas.deals.read
-    # en la Private App de HubSpot. Revisa los Scopes de tu token.
-    print("ADVERTENCIA: no se pudo leer la lista de etapas de HubSpot. "
-          "Revisa que tu Private App tenga el scope crm.schemas.deals.read. "
-          f"Respuesta de HubSpot: {respuesta_etapas.status_code} - "
-          f"{respuesta_etapas.text[:200]}")
+    print("ADVERTENCIA: no se pudo leer la lista de etapas de HubSpot.")
+    print("Codigo de respuesta:", respuesta_etapas.status_code)
+    print("Claves recibidas en el JSON:", list(datos_etapas.keys()))
+    print("Cantidad de opciones encontradas:", len(datos_etapas.get("options", [])))
+    print("Respuesta completa:", respuesta_etapas.text[:1500])
 
 cuerpo = {
     "sorts": [{"propertyName": "hs_lastmodifieddate", "direction": "DESCENDING"}],
