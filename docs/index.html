@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dashboard de Pedidos y Tickets</title>
+<style>
+  body { font-family: -apple-system, Arial, sans-serif; background: #0f1115;
+         color: #e6e6e6; margin: 0; padding: 24px; }
+  h1 { font-size: 20px; }
+  h2 { margin-top: 40px; border-bottom: 2px solid #333; padding-bottom: 8px; }
+  h3 { color: #9ecbff; }
+  .fecha { color: #888; font-size: 13px; margin-bottom: 24px; }
+  .card { background: #1a1d24; border-radius: 10px; padding: 18px; margin: 14px 0; }
+  .kpis { display: flex; gap: 14px; flex-wrap: wrap; }
+  .kpi { background: #1a1d24; border-radius: 10px; padding: 16px 20px; min-width: 160px; }
+  .kpi .valor { font-size: 28px; font-weight: bold; }
+  .kpi .label { font-size: 13px; color: #aaa; }
+  .rojo { color: #ff6b6b; }
+  .verde { color: #6bff95; }
+  table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+  td, th { padding: 6px 8px; border-bottom: 1px solid #2a2d34; text-align: left; }
+  ul { margin: 6px 0; padding-left: 20px; }
+  .alerta { background: #3a2323; border-left: 4px solid #ff6b6b; padding: 10px; border-radius: 6px; }
+</style>
+</head>
+<body>
+<h1>📊 Dashboard — Pedidos y Tickets</h1>
+<div class="fecha">Actualizado: 15/08/2026 15:27 (hora Perú)</div>
+
+<h2 id="pedidos">📦 Pedidos</h2>
+<div class="card">
+<p># RESUMEN DE PEDIDOS — 2026-08-15</p>
+<h3>🔴 Requieren acción hoy:</h3>
+<ul>
+<li><strong>SUPER - MOCHILA PUBLICITARIA WALT</strong> (S/. 240): Vencido hoy, aún en FACTURA.</li>
+<li><strong>BOTICAS MB - VINIL PLOTEO LOGOS</strong> (S/. 195): Vencido hoy, aún en PRODUCCION.</li>
+<li><strong>SUPER - ENVIO 2 MODULOS PIURA 12-8</strong> (S/. 50): Vencido ayer (14/8), aún en FACTURA.</li>
+<li><strong>LIQUI MOLY - BANNER VMT</strong> (S/. 2.040): Vencido hace 2 días (13/8), aún en FACTURA.</li>
+</ul>
+<ul>
+<li>--</li>
+</ul>
+<h3>🟡 Ojo esta semana:</h3>
+<ul>
+<li><strong>SUPER - MEGA EVENTO VEGA</strong> (S/. 4.920): Cierra 18/8, aún en PRODUCCION — pedido grande.</li>
+<li><strong>SUPER - CANAL TRADICIONAL PROVINCIA</strong> (S/. 28.210): Cierra 18/8, aún en FACTURA — <strong>el más crítico por monto</strong>.</li>
+<li><strong>ESET - HIRAOKA SAN MIGUEL Y CENTRO 2</strong> (S/. 1.340): Cierra 18/8, aún en PRODUCCION.</li>
+<li><strong>ESET - BRANDING PUNTOS DE VENTA</strong> (S/. 2.678): Cierra 18/8, aún en PRODUCCION.</li>
+<li><strong>SUPER - CAJA CARTON CON LOGO TROQUEL</strong> (S/. 130): Cierra 18/8, aún en FACTURA.</li>
+</ul>
+<ul>
+<li>--</li>
+</ul>
+<h3>🟢 Resto bajo control:</h3>
+<p>El resto de pedidos están en etapas tempranas (Negocio Ganado o Seguimiento Presupuesto) o tienen plazos más holgados. Sin novedades urgentes.</p>
+</div>
+
+<h2 id="tickets">🎫 Tickets</h2>
+
+<div class="kpis">
+  <div class="kpi">
+    <div class="valor rojo">56.0%</div>
+    <div class="label">Cierre correcto<br>(etapa = Pedido finalizado)</div>
+  </div>
+  <div class="kpi">
+    <div class="valor rojo">8.0%</div>
+    <div class="label">Con fecha de cierre<br>futura (inconsistente)</div>
+  </div>
+  <div class="kpi">
+    <div class="valor">100</div>
+    <div class="label">Tickets analizados<br>(mas recientes)</div>
+  </div>
+</div>
+
+<p class="alerta">⚠️ 0 llamadas registradas como ticket en este lote — revisar si se estan perdiendo pedidos por telefono.</p>
+
+<div class="card">
+<h3>Resumen</h3>
+<p># RESUMEN DE TICKETS - 15 de agosto 2026</p>
+<h3>🔴 PRIORIDAD ALTA / URGENTE</h3>
+<p><strong>3 tickets requieren atención inmediata:</strong></p>
+<p>1. <strong>SUPER - BOX INFLUENCER</strong> (desde 30 jun) - En etapa PRODUCCION - IMPRESION hace más de 1 mes. Necesita seguimiento.</p>
+<p>2. <strong>INTECNIA - BOLSAS COUCHE 200 und</strong> (desde 14 ago) - En etapa PRODUCCION - IMPRESION, creado ayer.</p>
+<p>3. <strong>SUPER - MEGA EVENTO VEGA</strong> - En etapa INFORME PROYECTO, con prioridad high desde el 8 ago.</p>
+<p>4. <strong>SUPER - TRUJILLO BRANDING</strong> - En etapa INFORME PROYECTO desde el 19 mayo. <strong>Muy atrasado.</strong></p>
+<p>5. <strong>GLORIFICADOR KICK AND RULES - MUESTRA</strong> - En etapa PRE PRODUCCION - VALIDACION FINAL DEL CLIENTE desde abril. <strong>Requiere cierre urgente.</strong></p>
+<ul>
+<li>--</li>
+</ul>
+<h3>🟡 EN PROCESO (sin urgencia inmediata)</h3>
+<ul>
+<li>7 tickets en PRODUCCION - IMPRESION con prioridad media o sin asignar</li>
+<li>3 tickets en INFORME PROYECTO (prioridad media)</li>
+<li>2 tickets en validación/confirmación de arte</li>
+<li>2 tickets en GESTION DE ENTREGA DE PRODUCTO</li>
+</ul>
+<ul>
+<li>--</li>
+</ul>
+<h3>🟢 RESTO</h3>
+<p>El resto de los tickets avanzan sin problemas (en diseño, pre-producción o ya finalizados).</p>
+</div>
+
+<div class="card">
+<h3>Por etapa</h3>
+<table><tr><th>Etapa</th><th>Cantidad</th><th>%</th></tr>
+<tr><td>PEDIDO FINALIZADO</td><td>56</td><td>56.0%</td></tr>
+<tr><td>INFORME PROYECTO</td><td>17</td><td>17.0%</td></tr>
+<tr><td>DISEÑO</td><td>8</td><td>8.0%</td></tr>
+<tr><td>GESTION DE ENTREGA DE PRODUCTO</td><td>7</td><td>7.0%</td></tr>
+<tr><td>PRODUCCION - IMPRESION</td><td>6</td><td>6.0%</td></tr>
+<tr><td>CONFIRMACION DE ARTE</td><td>4</td><td>4.0%</td></tr>
+<tr><td>PRE PRODUCCION - VALIDACION FINAL DEL CLIENTE</td><td>2</td><td>2.0%</td></tr>
+
+</table>
+</div>
+
+<div class="card">
+<h3>Por prioridad</h3>
+<table><tr><th>Prioridad</th><th>Cantidad</th><th>%</th></tr>
+<tr><td>MEDIUM</td><td>40</td><td>40.0%</td></tr>
+<tr><td>HIGH</td><td>29</td><td>29.0%</td></tr>
+<tr><td>URGENT</td><td>21</td><td>21.0%</td></tr>
+<tr><td>LOW</td><td>8</td><td>8.0%</td></tr>
+<tr><td>SIN ASIGNAR</td><td>2</td><td>2.0%</td></tr>
+
+</table>
+</div>
+
+<div class="card">
+<h3>Por canal</h3>
+<table><tr><th>Canal</th><th>Cantidad</th><th>%</th></tr>
+<tr><td>CHAT</td><td>65</td><td>65.0%</td></tr>
+<tr><td>EMAIL</td><td>34</td><td>34.0%</td></tr>
+<tr><td>SIN CANAL</td><td>1</td><td>1.0%</td></tr>
+
+</table>
+</div>
+
+</body>
+</html>
