@@ -11,9 +11,18 @@ CALLMEBOT_APIKEY  = os.environ["CALLMEBOT_APIKEY"]
 headers = {"Authorization": f"Bearer {HUBSPOT_TOKEN}",
            "Content-Type": "application/json"}
 base = "https://api.hubapi.com"
+respuesta_etapas = requests.get(f"{base}/crm/v3/properties/deals/dealstage",
+                                headers=headers)
 etapas = {op["value"]: op["label"] for op in
-          requests.get(f"{base}/crm/v3/properties/deals/dealstage",
-                       headers=headers).json()["options"]}
+          respuesta_etapas.json().get("options", [])}
+if not etapas:
+    # Si esto pasa, casi siempre falta el permiso crm.schemas.deals.read
+    # en la Private App de HubSpot. Revisa los Scopes de tu token.
+    print("ADVERTENCIA: no se pudo leer la lista de etapas de HubSpot. "
+          "Revisa que tu Private App tenga el scope crm.schemas.deals.read. "
+          f"Respuesta de HubSpot: {respuesta_etapas.status_code} - "
+          f"{respuesta_etapas.text[:200]}")
+
 cuerpo = {
     "sorts": [{"propertyName": "hs_lastmodifieddate", "direction": "DESCENDING"}],
     "properties": ["dealname", "dealstage", "amount", "closedate"],
@@ -26,8 +35,6 @@ lineas = []
 for pedido in pedidos:
     p = pedido["properties"]
     codigo_etapa = p.get("dealstage")
-    # Si el codigo no esta en nuestro diccionario, usamos un texto neutral
-    # en vez de mostrar el numero/codigo crudo al usuario.
     etapa = etapas.get(codigo_etapa, "(etapa sin identificar)")
     lineas.append(
         f"- {p.get('dealname') or '(sin nombre)'} | "
@@ -73,4 +80,4 @@ envio = requests.get("https://api.callmebot.com/whatsapp.php", params={
     "text": resumen,
     "apikey": CALLMEBOT_APIKEY,
 })
-print("\nEnvio a WhatsApp:", envio.status_code, "-", envio.text[:200])
+print("\nEnvío a WhatsApp:", envio.status_code, "-", envio.text[:200])
