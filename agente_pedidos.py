@@ -3,13 +3,11 @@ import requests
 from datetime import datetime, timezone, timedelta
 from anthropic import Anthropic
 
-# Las llaves llegan seguras desde los "secretos" de GitHub
 HUBSPOT_TOKEN     = os.environ["HUBSPOT_TOKEN"]
 ANTHROPIC_API_KEY = os.environ["ANTHROPIC_API_KEY"]
 CALLMEBOT_PHONE   = os.environ["CALLMEBOT_PHONE"]
 CALLMEBOT_APIKEY  = os.environ["CALLMEBOT_APIKEY"]
 
-# ===== 1) LEER PEDIDOS DE HUBSPOT =====
 headers = {"Authorization": f"Bearer {HUBSPOT_TOKEN}",
            "Content-Type": "application/json"}
 base = "https://api.hubapi.com"
@@ -27,7 +25,10 @@ pedidos = requests.post(f"{base}/crm/v3/objects/deals/search",
 lineas = []
 for pedido in pedidos:
     p = pedido["properties"]
-    etapa = etapas.get(p.get("dealstage"), p.get("dealstage"))
+    codigo_etapa = p.get("dealstage")
+    # Si el codigo no esta en nuestro diccionario, usamos un texto neutral
+    # en vez de mostrar el numero/codigo crudo al usuario.
+    etapa = etapas.get(codigo_etapa, "(etapa sin identificar)")
     lineas.append(
         f"- {p.get('dealname') or '(sin nombre)'} | "
         f"Etapa: {etapa} | Monto: {p.get('amount') or '0'} | "
@@ -35,7 +36,6 @@ for pedido in pedidos:
     )
 texto_pedidos = "\n".join(lineas)
 
-# ===== 2) INSTRUCCIONES (edita a tu gusto) =====
 hoy = datetime.now(timezone(timedelta(hours=-5))).strftime("%Y-%m-%d")
 INSTRUCCIONES = f"""
 Hoy es {hoy}. Eres el asistente de pedidos de una imprenta.
@@ -48,11 +48,16 @@ en español, con este formato:
    cierran en los próximos 2-3 días.
 3) 🟢 Una línea final tranquilizadora sobre el resto.
 
-Sé concreto, usa los nombres de los pedidos y no inventes datos.
-Si un pedido no tiene fecha, no lo trates como vencido.
+Reglas estrictas:
+- Sé concreto, usa los nombres de los pedidos y no inventes datos.
+- Si un pedido no tiene fecha, no lo trates como vencido.
+- NUNCA muestres codigos ni numeros de etapa internos (por ejemplo cosas
+  como "65922067" o "closedwon"). Usa SIEMPRE el nombre de etapa tal cual
+  aparece en el texto de cada pedido (ej. "Produccion", "Presupuesto").
+  Si un pedido dice "(etapa sin identificar)", escribe exactamente esa
+  frase, nunca un codigo.
 """
 
-# ===== 3) CLAUDE ARMA EL RESUMEN =====
 client = Anthropic(api_key=ANTHROPIC_API_KEY)
 respuesta = client.messages.create(
     model="claude-haiku-4-5",
@@ -63,10 +68,9 @@ respuesta = client.messages.create(
 resumen = respuesta.content[0].text
 print(resumen)
 
-# ===== 4) ENVIAR A WHATSAPP =====
 envio = requests.get("https://api.callmebot.com/whatsapp.php", params={
     "phone": CALLMEBOT_PHONE,
     "text": resumen,
     "apikey": CALLMEBOT_APIKEY,
 })
-print("\nEnvío a WhatsApp:", envio.status_code, "-", envio.text[:200])
+print("\nEnvio a WhatsApp:", envio.status_code, "-", envio.text[:200])
