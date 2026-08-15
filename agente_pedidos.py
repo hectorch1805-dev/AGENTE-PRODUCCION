@@ -11,16 +11,21 @@ CALLMEBOT_APIKEY  = os.environ["CALLMEBOT_APIKEY"]
 headers = {"Authorization": f"Bearer {HUBSPOT_TOKEN}",
            "Content-Type": "application/json"}
 base = "https://api.hubapi.com"
-respuesta_etapas = requests.get(f"{base}/crm/v3/properties/deals/dealstage",
-                                headers=headers)
-datos_etapas = respuesta_etapas.json()
-etapas = {op["value"]: op["label"] for op in datos_etapas.get("options", [])}
+
+# Las etapas de negociacion viven en los "Pipelines", no en la propiedad
+# dealstage directamente. Por eso leemos aqui, no en /properties/deals/dealstage.
+respuesta_pipelines = requests.get(f"{base}/crm/v3/pipelines/deals",
+                                   headers=headers)
+datos_pipelines = respuesta_pipelines.json()
+etapas = {}
+for pipeline in datos_pipelines.get("results", []):
+    for etapa in pipeline.get("stages", []):
+        etapas[etapa["id"]] = etapa["label"]
+
 if not etapas:
     print("ADVERTENCIA: no se pudo leer la lista de etapas de HubSpot.")
-    print("Codigo de respuesta:", respuesta_etapas.status_code)
-    print("Claves recibidas en el JSON:", list(datos_etapas.keys()))
-    print("Cantidad de opciones encontradas:", len(datos_etapas.get("options", [])))
-    print("Respuesta completa:", respuesta_etapas.text[:1500])
+    print("Codigo de respuesta:", respuesta_pipelines.status_code)
+    print("Respuesta completa:", respuesta_pipelines.text[:1500])
 
 cuerpo = {
     "sorts": [{"propertyName": "hs_lastmodifieddate", "direction": "DESCENDING"}],
