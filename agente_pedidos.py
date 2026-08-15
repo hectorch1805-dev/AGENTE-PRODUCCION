@@ -61,6 +61,7 @@ def texto_a_html(texto):
                 html.append("</ul>")
                 dentro_lista = False
             continue
+        # negritas **texto**
         while "**" in linea:
             linea = linea.replace("**", "<strong>", 1)
             linea = linea.replace("**", "</strong>", 1)
@@ -144,8 +145,14 @@ cuerpo_tickets = {
                    "createdate", "closed_date", "source_type"],
     "limit": 100,
 }
-tickets = requests.post(f"{base}/crm/v3/objects/tickets/search",
-                        headers=headers, json=cuerpo_tickets).json()["results"]
+respuesta_tickets = requests.post(f"{base}/crm/v3/objects/tickets/search",
+                                  headers=headers, json=cuerpo_tickets)
+datos_tickets = respuesta_tickets.json()
+if "results" not in datos_tickets:
+    print("ADVERTENCIA: no se pudo leer la lista de tickets de HubSpot.")
+    print("Codigo de respuesta:", respuesta_tickets.status_code)
+    print("Respuesta completa:", respuesta_tickets.text[:1500])
+tickets = datos_tickets.get("results", [])
 
 lineas_tickets = []
 conteo_etapas = {}
@@ -211,6 +218,184 @@ print("\n=== RESUMEN DE TICKETS ===")
 print(resumen_tickets)
 print(f"\nKPI cierre correcto: {pct_cierre_correcto}%  |  "
       f"KPI fecha futura: {pct_fecha_futura}%  |  Llamadas: {llamadas}")
+
+
+# ===================================================================
+# RONDA 3: REPORTE SEMANAL (solo se genera los viernes)
+# ===================================================================
+if hoy_dt.weekday() == 4:  # 0=lunes ... 4=viernes
+    inicio_semana = (hoy_dt - timedelta(days=4)).replace(hour=0, minute=0, second=0, microsecond=0)
+    inicio_mes = hoy_dt.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+
+    def owners_por_id():
+        """Trae los nombres del equipo para no mostrar solo IDs numericos."""
+        r = requests.get(f"{base}/crm/v3/owners", headers=headers, params={"limit": 100})
+        datos = r.json()
+        if "results" not in datos:
+            print("ADVERTENCIA: no se pudo leer la lista de miembros del equipo.")
+            print("Respuesta:", r.status_code, "-", r.text[:500])
+            return {}
+        return {str(o["id"]): f"{o.get('firstName', '')} {o.get('lastName', '')}".strip()
+                for o in datos["results"]}
+
+    nombres_equipo = owners_por_id()
+
+    # --- 1) Negocios creados esta semana (lunes a viernes) ---
+    cuerpo_creados = {
+        "filterGroups": [{"filters": [
+            {"propertyName": "createdate", "operator": "GTE",
+             "value": str(int(inicio_semana.timestamp() * 1000))},
+        ]}],
+        "properties": ["dealname"],
+        "limit": 100,
+    }
+    creados = requests.post(f"{base}/crm/v3/objects/deals/search",
+                            headers=headers, json=cuerpo_creados).json().get("results", [])
+    total_creados = len(creados)
+
+    # --- 2) Negocios pasados a produccion esta semana ---
+    cuerpo_produccion = {
+        "filterGroups": [{"filters": [
+            {"propertyName": "fecha_confirmacion_produccion", "operator": "GTE",
+             "value": str(int(inicio_semana.timestamp() * 1000))},
+        ]}],
+        "properties": ["dealname"],
+        "limit": 100,
+    }
+    pasaron_produccion = requests.post(f"{base}/crm/v3/objects/deals/search",
+                            headers=headers, json=cuerpo_produccion).json().get("results", [])
+    total_produccion = len(pasaron_produccion)
+
+    # --- 3) Cierre dentro del mes actual en Produccion/Factura/Ganado, por cliente ---
+    cuerpo_mes = {
+        "sorts": [{"propertyName": "hs_lastmodifieddate", "direction": "DESCENDING"}],
+        "properties": ["dealname", "dealstage", "amount", "closedate"],
+        "limit": 100,
+    }
+    todos_deals = requests.post(f"{base}/crm/v3/objects/deals/search",
+                                headers=headers, json=cuerpo_mes).json().get("results", [])
+
+    acumulado_por_cliente = {}
+    for d in todos_deals:
+        p = d["properties"]
+        etapa = etapas_deals.get(p.get("dealstage"), "").upper()
+        if not any(clave in etapa for clave in ["PRODUCCION", "FACTURA", "GANADO"]):
+            continue
+        cierre = p.get("closedate")
+        if not cierre:
+            continue
+        try:
+            fc = datetime.fromisoformat(cierre.replace("Z", "+00:00"))
+        except ValueError:
+            continue
+        if fc < inicio_mes:
+            continue
+        nombre = p.get("dealname") or "(sin nombre)"
+        # Se asume el formato CLIENTE - PRODUCTO para identificar al cliente
+        cliente = nombre.split(" - ")[0].strip().upper()
+        monto = float(p.get("amount") or 0)
+        acumulado_por_cliente[cliente] = acumulado_por_cliente.get(cliente, 0) + monto
+
+    # --- 4) Tickets por miembro del equipo, esta semana ---
+    cuerpo_tickets_semana = {
+        "filterGroups": [{"filters": [
+            {"propertyName": "createdate", "operator": "GTE",
+             "value": str(int(inicio_semana.timestamp() * 1000))},
+        ]}],
+        "properties": ["hubspot_owner_id", "hs_ticket_priority"],
+        "limit": 100,
+    }
+    tickets_semana = requests.post(f"{base}/crm/v3/objects/tickets/search",
+                        headers=headers, json=cuerpo_tickets_semana).json().get("results", [])
+
+    tickets_por_persona = {}
+    alta_urgente_semana = 0
+    for t in tickets_semana:
+        p = t["properties"]
+        owner_id = p.get("hubspot_owner_id")
+        nombre = nombres_equipo.get(owner_id, "Sin asignar")
+        tickets_por_persona[nombre] = tickets_por_persona.get(nombre, 0) + 1
+        if (p.get("hs_ticket_priority") or "").upper() in ("HIGH", "URGENT"):
+            alta_urgente_semana += 1
+    pct_alta_urgente_semana = (round(100 * alta_urgente_semana / len(tickets_semana), 1)
+                                if tickets_semana else 0)
+
+    # --- Extra: tickets creados vs cerrados esta semana ---
+    cerrados_semana = sum(
+        1 for t in tickets_semana
+        if etapas_tickets.get(t["properties"].get("hs_pipeline_stage"), "").upper() == "PEDIDO FINALIZADO"
+    )
+
+    # --- Extra: negocios estancados (+10 dias sin moverse, no cerrados) ---
+    limite_estancado = hoy_dt - timedelta(days=10)
+    estancados = []
+    cuerpo_estancados = {
+        "filterGroups": [{"filters": [
+            {"propertyName": "hs_lastmodifieddate", "operator": "LTE",
+             "value": str(int(limite_estancado.timestamp() * 1000))},
+        ]}],
+        "properties": ["dealname", "dealstage", "hs_lastmodifieddate"],
+        "limit": 50,
+        "sorts": [{"propertyName": "hs_lastmodifieddate", "direction": "ASCENDING"}],
+    }
+    posibles_estancados = requests.post(f"{base}/crm/v3/objects/deals/search",
+                        headers=headers, json=cuerpo_estancados).json().get("results", [])
+    for d in posibles_estancados:
+        p = d["properties"]
+        etapa = etapas_deals.get(p.get("dealstage"), "")
+        if "GANADO" in etapa.upper() or "PERDIDO" in etapa.upper():
+            continue
+        estancados.append((p.get("dealname") or "(sin nombre)", etapa,
+                           (p.get("hs_lastmodifieddate") or "")[:10]))
+
+    # --- Armar el HTML del reporte semanal ---
+    filas_clientes = "".join(
+        f"<tr><td>{c}</td><td>S/ {m:,.2f}</td></tr>\n"
+        for c, m in sorted(acumulado_por_cliente.items(), key=lambda x: -x[1])
+    )
+    filas_equipo = "".join(
+        f"<tr><td>{persona}</td><td>{cant}</td></tr>\n"
+        for persona, cant in sorted(tickets_por_persona.items(), key=lambda x: -x[1])
+    )
+    filas_estancados = "".join(
+        f"<tr><td>{nom}</td><td>{et}</td><td>{fecha}</td></tr>\n"
+        for nom, et, fecha in estancados[:15]
+    ) or "<tr><td colspan=3>Ninguno detectado</td></tr>"
+
+    html_semanal = f"""
+<h2 id="semanal">📅 Reporte Semanal — Semana del {inicio_semana.strftime('%d/%m')} al {hoy_dt.strftime('%d/%m')}</h2>
+
+<div class="kpis">
+  <div class="kpi"><div class="valor">{total_creados}</div><div class="label">Negocios creados<br>esta semana</div></div>
+  <div class="kpi"><div class="valor">{total_produccion}</div><div class="label">Pasaron a Producción<br>esta semana</div></div>
+  <div class="kpi"><div class="valor">{len(tickets_semana)}</div><div class="label">Tickets creados<br>esta semana</div></div>
+  <div class="kpi"><div class="valor">{cerrados_semana}</div><div class="label">Tickets cerrados<br>esta semana</div></div>
+  <div class="kpi"><div class="valor {'rojo' if pct_alta_urgente_semana > 40 else 'verde'}">{pct_alta_urgente_semana}%</div><div class="label">Tickets Alta/Urgente<br>esta semana</div></div>
+</div>
+
+<div class="card">
+<h3>Acumulado por cliente este mes (Producción / Factura / Ganado)</h3>
+<table><tr><th>Cliente</th><th>Monto acumulado</th></tr>
+{filas_clientes}
+</table>
+</div>
+
+<div class="card">
+<h3>Tickets por miembro del equipo (esta semana)</h3>
+<table><tr><th>Persona</th><th>Tickets</th></tr>
+{filas_equipo}
+</table>
+</div>
+
+<div class="card">
+<h3>⚠️ Negocios estancados (+10 días sin movimiento)</h3>
+<table><tr><th>Negocio</th><th>Etapa</th><th>Última actividad</th></tr>
+{filas_estancados}
+</table>
+</div>
+"""
+else:
+    html_semanal = ""
 
 
 # ===================================================================
@@ -310,6 +495,8 @@ html_final = f"""<!DOCTYPE html>
 </table>
 </div>
 
+{html_semanal}
+
 </body>
 </html>
 """
@@ -325,3 +512,11 @@ print("\nDashboard guardado en docs/index.html")
 # ===================================================================
 enviar_whatsapp(f"📦 Reporte de pedidos de hoy ({hoy}). Mira el detalle: {URL_DASHBOARD}#pedidos")
 enviar_whatsapp(f"🎫 Reporte de tickets de hoy ({hoy}). Cierre correcto: {pct_cierre_correcto}% | Ver detalle: {URL_DASHBOARD}#tickets")
+
+if hoy_dt.weekday() == 4:
+    enviar_whatsapp(
+        f"📅 Reporte semanal ({hoy}). Negocios creados: {total_creados} | "
+        f"Pasaron a Producción: {total_produccion} | "
+        f"Tickets Alta/Urgente: {pct_alta_urgente_semana}% | "
+        f"Ver detalle completo: {URL_DASHBOARD}#semanal"
+    )
