@@ -223,7 +223,7 @@ print(f"\nKPI cierre correcto: {pct_cierre_correcto}%  |  "
 # ===================================================================
 # RONDA 3: REPORTE SEMANAL (solo se genera los viernes)
 # ===================================================================
-if hoy_dt.weekday() == 4:  # 0=lunes ... 4=viernes
+if True:  # PRUEBA TEMPORAL: forzado a generar siempre. Volver a "hoy_dt.weekday() == 4" despues.
     inicio_semana = (hoy_dt - timedelta(days=4)).replace(hour=0, minute=0, second=0, microsecond=0)
     inicio_mes = hoy_dt.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
 
@@ -513,7 +513,7 @@ print("\nDashboard guardado en docs/index.html")
 enviar_whatsapp(f"📦 Reporte de pedidos de hoy ({hoy}). Mira el detalle: {URL_DASHBOARD}#pedidos")
 enviar_whatsapp(f"🎫 Reporte de tickets de hoy ({hoy}). Cierre correcto: {pct_cierre_correcto}% | Ver detalle: {URL_DASHBOARD}#tickets")
 
-if hoy_dt.weekday() == 4:
+if True:  # PRUEBA TEMPORAL: forzado a generar siempre. Volver a "hoy_dt.weekday() == 4" despues.
     enviar_whatsapp(
         f"📅 Reporte semanal ({hoy}). Negocios creados: {total_creados} | "
         f"Pasaron a Producción: {total_produccion} | "
